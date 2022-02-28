@@ -1,3 +1,4 @@
+# ALL_TYPES holds the event types we take into account in our data processing
 ALL_TYPES = {'ELITE_MONSTER_KILL': ["killerId","type","monsterType", "monsterSubType"],
              'ITEM_PURCHASED': ["participantId","type", "itemId"],
              'CHAMPION_KILL': ["killerId", "victimId"],
@@ -9,6 +10,7 @@ ALL_TYPES = {'ELITE_MONSTER_KILL': ["killerId","type","monsterType", "monsterSub
              'ITEM_SOLD': ["participantId","type", "itemId"],
              'GAME_END': []}
 
+# DEPRECATED_TYPES are the event types we ignore
 DEPRECATED_TYPES = {'LEVEL_UP',
                     'DRAGON_SOUL_GIVEN',
                     'CHAMPION_TRANSFORM',
@@ -19,28 +21,33 @@ DEPRECATED_TYPES = {'LEVEL_UP',
 
 
 class Match:
+    """
+    A match is an object that parses and holds events occurrences in a given timeline.
+    """
     def __init__(self, game_data):
-        self.winning_team = None
-        self.processed_game_data = {"A":[],"B":[]}
-        self.valid_data = True
-        if 'info' not in game_data:
+        """
+        Match constructor.
+        :param game_data: a game timeline (not necessarily valid data)
+        """
+        self.winning_team = None  # which team won: 'A' or 'B'
+        self.processed_game_data = {"A": [], "B": []}  # The events count relative to team 'A' and 'B'
+        self.valid_data = True  # indication whether the data is valid for process or not
+        if 'info' not in game_data:  # we get our data from game_data['info'], if it's not ther the data is invalid
             self.valid_data = False
             return
         self.game_data = game_data['info']['frames']
         self.match_id = game_data['metadata']['matchId']
-        self.champions = [None] * 10
-        self.num_of_champions = 0
+        self.champions = {'A': set(), 'B': set()}  # the champions of team 'A' and 'B'
+        self.champions_a_valid = False  # if there are less than 5 champions in 'A', 'A' data is invalid
+        self.champions_b_valid = False  # if there are less than 5 champions in 'A', 'A' data is invalid
         self.__get_team_champions()
-        if self.num_of_champions < 10:
-            self.valid_data = False
-            return
         self.__pre_process_data()
-        if self.winning_team is None:
+        if self.winning_team is None:  # if there is no winning team we cannot use the data
             self.valid_data = False
 
     def get_event_types(self):
         """
-        Return all
+        Extracts all event types exist in the given timeline.
         :return:
         """
         types = set()
@@ -51,6 +58,11 @@ class Match:
         return types
 
     def __pre_process_data(self):
+        """
+        For each team ('A' and 'B') and for each minute in the given timeline, extracts the number of appearances of
+        each relevant event (relevant event means that it appears in the ALL_TYPE dictionary).
+        :return:
+        """
         for minute in self.game_data:
             team_a = {}
             team_b = {}
@@ -89,49 +101,51 @@ class Match:
             self.processed_game_data["B"].append(team_b)
 
     def __get_team_champions(self):
+        """
+        Extracts the champions for each team ('A' and 'B')
+        :return:
+        """
         for minute in self.game_data:
             for event in minute['events']:
-                if 'type' in event and event['type'] == 'CHAMPION_KILL':
+                if ('type' in event) and (event['type'] == 'CHAMPION_KILL'):
                     if 'victimDamageDealt' in event:
-                        if not self.champions[event['victimId']-1]:
-                            self.num_of_champions += 1
-                            self.champions[event['victimId']-1] = event['victimDamageDealt'][0]['name']
+                        if 0 < event['victimId'] <= 5:
+                            self.champions['A'].add(event['victimDamageDealt'][0]['name'])
+                        elif event['victimId'] > 5:
+                            self.champions['B'].add(event['victimDamageDealt'][0]['name'])
                     if 'victimDamageReceived' in event:
                         for enemy_champion in event['victimDamageReceived']:
-                            champion_id = enemy_champion['participantId'] - 1
-                            if champion_id == -1:
-                                continue
-                            if not self.champions[champion_id]:
-                                self.champions[champion_id] = enemy_champion['name']
-                                self.num_of_champions += 1
-                    if self.num_of_champions == 10:
-                        return
+                            champion_id = enemy_champion['participantId']
+                            if 0 < champion_id <= 5:
+                                self.champions['A'].add(enemy_champion['name'])
+                            elif champion_id > 5:
+                                self.champions['B'].add(enemy_champion['name'])
+                if len(self.champions['A']) == 5 and len(self.champions['B']) == 5:
+                    self.champions_a_valid = True
+                    self.champions_b_valid = True
+                    return
+        if len(self.champions['A']) == 5:
+            self.champions_a_valid = True
+        if len(self.champions['B']) == 5:
+            self.champions_b_valid = True
 
 
 class Team:
     """
-    This class takes the users data and transforms it in a way that we will take into account only one side
-    of each game
+    This class takes Match object and transforms it in a way that we will take into account only one side
+    of each game.
     """
+    KNOWN_TEAMS = {'A', 'B'}
 
     def __init__(self, match: Match, team_a_or_b: str = 'A'):
-        # if len(args) == 4 and isinstance(args[0], list) and isinstance(args[1], set) and isinstance(args[1],
-        #                                                                                             set) and is:
-        #     self.items = args[0]
-        #     self.champions = args[1]
-        #     self.rivals = args[2]
-        # elif len(args) == 2 and isinstance(args[0], Match) and isinstance(args[1], str) and \
-        #         (args[1] == 'A' or args[1] == 'B'):
-        #     self.items = args[0].processed_game_data[args[1]]
-        #     self.champions = set(args[0].champions[:5])
-        #     self.rivals = set(args[0].champions[5:])
-        #     self.winners = True if args[0].winning_team == args[1] else False
-        # else:
-        #     print("Error: can't intialize Team object! Check given arguments.")
-        #     self.items = []
-        #     self.champions = set()
-        #     self.rivals = set()
+        """
+        Team constructor
+        :param match: the match to construct a team from
+        :param team_a_or_b: the team to construct from the given match
+        """
         self.items = match.processed_game_data[team_a_or_b]
-        self.champions = set(match.champions[:5])
-        self.rivals = set(match.champions[5:])
-        self.winners = True if match.winning_team == team_a_or_b else False
+        self.champions = match.champions[team_a_or_b]
+        self.rivals = match.champions[list(Team.KNOWN_TEAMS.difference(team_a_or_b))[0]]
+        self.winners = (match.winning_team == team_a_or_b)
+        self.valid_data = (len(self.champions) == 5)
+
