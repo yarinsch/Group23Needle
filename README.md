@@ -55,9 +55,8 @@ at the top of the file)
 
 
 You can download the data here (the processed data file are
-'test_bronze_teams.pkl' and 'grand_teams.pkl'): https://drive.google.
-com/drive/folders/13v0RDy0Am6guIRwnPi45idVX-z5sNZBG?
-usp=sharing
+'test_bronze_teams.pkl' and 'grand_teams.pkl'):
+https://drive.google.com/drive/folders/13v0RDy0Am6guIRwnPi45idVX-z5sNZBG?usp=sharing
 
 ## Algorithms
 
