@@ -14,9 +14,6 @@ process this data to Objects that match our needs.
 data_types.py - two classes (Objects types that we use as our data types)
 that represents the data as we need.
 
-similarity_tools.py - the functions we used to find similarities
-between two different games (timelines).
-
 test_bronze_teams.pkl - the bronze teams data (Team objects).
 
 grand_teams.pkl - the grandmaster teams data (Team objects).
