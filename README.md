@@ -2,11 +2,11 @@
 
 ## Files
 
-##### writeup_group23.pdf - our full report.
+writeup_group23.pdf - our full report.
 
 noimages_group23.pdf - our full report without images.
 
-####DataAnalysis.ipynb - The data analysis part.
+DataAnalysis.ipynb - The data analysis part.
 
 get_data.py - functions to get data from riot-games api and to
 process this data to Objects that match our needs.
