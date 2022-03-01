@@ -179,6 +179,11 @@ def create_grandmaster_timelines():
 
 
 def extract_and_save_teams():
+    """
+    Get the timelines from the timelines files, converts them to Team object and saves them.
+    Note: From each Bronze timeline we take 1 side only to maintain the data independent.
+    :return:
+    """
     with open('timelines_bronze.pkl', 'rb') as f:
         bronze_data = pickle.load(f)
 
@@ -199,7 +204,7 @@ def extract_and_save_teams():
         if temp_bronze_match.valid_data:
             if temp_bronze_match.champions_a_valid:
                 tests.append(Team(temp_bronze_match, 'A'))
-            if temp_bronze_match.champions_b_valid:
+            elif temp_bronze_match.champions_b_valid:
                 tests.append(Team(temp_bronze_match, 'B'))
 
     for match in grand_data0:
@@ -239,3 +244,7 @@ def save_teams(teams: list, file_name: str):
     """
     with open(file_name, 'wb') as f:
         pickle.dump(teams, f)
+
+
+if __name__ == "__main__":
+    extract_and_save_teams()
